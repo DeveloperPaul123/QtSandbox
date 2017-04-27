@@ -24,16 +24,32 @@
 
 #include <QBrush>
 #include "SizeGripItem.h"
+#include <QApplication>
+#include <iostream>
 
 SizeGripItem::HandleItem::HandleItem(int positionFlags, SizeGripItem* parent)
-    : QGraphicsRectItem(-4, -4, 8, 8, parent),
-      positionFlags_(positionFlags),
-      parent_(parent)
+	: QGraphicsRectItem(-4, -4, 8, 8, parent),
+	positionFlags_(positionFlags),
+	parent_(parent)
 {
-    setBrush(QBrush(Qt::lightGray));
-    setFlag(ItemIsMovable);
-    setFlag(ItemSendsGeometryChanges);
+	setBrush(QBrush(Qt::lightGray));
+	setFlag(ItemIsMovable);
+	setFlag(ItemSendsGeometryChanges);
+	setAcceptHoverEvents(true);
 }
+
+void SizeGripItem::HandleItem::hoverEnterEvent(QGraphicsSceneHoverEvent* event)
+{
+	setBrush(QBrush(Qt::blue));
+	this->update();
+}
+
+void SizeGripItem::HandleItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
+{
+	setBrush(QBrush(Qt::lightGray));
+	this->update();
+}
+
 
 int SizeGripItem::HandleItem::positionFlags() const
 {
@@ -43,7 +59,7 @@ int SizeGripItem::HandleItem::positionFlags() const
 QVariant SizeGripItem::HandleItem::itemChange(GraphicsItemChange change,
                                               const QVariant &value)
 {
-    QVariant retVal = value;
+	auto retVal = value;
 
     if (change == ItemPositionChange)
     {
@@ -51,8 +67,9 @@ QVariant SizeGripItem::HandleItem::itemChange(GraphicsItemChange change,
     }
     else if (change == ItemPositionHasChanged)
     {
-        QPointF pos = value.toPointF();
-
+	    auto pos = value.toPointF();
+		std::cout << "Position: (" << this->pos().x() << ", " << this->pos().y() << ")" 
+    		<< "New pos: " << pos.x() << ", "<< pos.y() << ")" << std::endl;
         switch (positionFlags_)
         {
             case TopLeft:
@@ -81,13 +98,12 @@ QVariant SizeGripItem::HandleItem::itemChange(GraphicsItemChange change,
                 break;
         }
     }
-
     return retVal;
 }
 
 QPointF SizeGripItem::HandleItem::restrictPosition(const QPointF& newPos)
 {
-    QPointF retVal = pos();
+	auto retVal = pos();
 
     if (positionFlags_ & Top || positionFlags_ & Bottom)
         retVal.setY(newPos.y());

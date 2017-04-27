@@ -49,11 +49,12 @@ class SizeGripItem : public QGraphicsItem
             public:
                 HandleItem(int positionFlags, SizeGripItem* parent);
                 int positionFlags() const;
-
+				void hoverEnterEvent(QGraphicsSceneHoverEvent * event) override;
+				void hoverLeaveEvent(QGraphicsSceneHoverEvent * event) override;
             protected:
                 virtual QVariant itemChange(GraphicsItemChange change,
                                             const QVariant &value);
-
+			
             private:
                 QPointF restrictPosition(const QPointF& newPos);
 

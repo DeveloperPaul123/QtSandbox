@@ -32,9 +32,9 @@ namespace
     class RectResizer : public SizeGripItem::Resizer
     {
         public:
-            virtual void operator()(QGraphicsItem* item, const QRectF& rect)
+	    void operator()(QGraphicsItem* item, const QRectF& rect) override
             {
-                QGraphicsRectItem* rectItem =
+	            auto rectItem =
                     dynamic_cast<QGraphicsRectItem*>(item);
 
                 if (rectItem)
@@ -47,9 +47,9 @@ namespace
     class EllipseResizer : public SizeGripItem::Resizer
     {
         public:
-            virtual void operator()(QGraphicsItem* item, const QRectF& rect)
+	    void operator()(QGraphicsItem* item, const QRectF& rect) override
             {
-                QGraphicsEllipseItem* ellipseItem =
+	            auto ellipseItem =
                     dynamic_cast<QGraphicsEllipseItem*>(item);
 
                 if (ellipseItem)
@@ -76,6 +76,18 @@ int main(int argc, char *argv[])
     ellipseItem.setPen(QPen(Qt::blue));
     ellipseItem.setFlag(QGraphicsItem::ItemIsMovable);
     scene.addItem(&ellipseItem);
+
+	QPolygonF points;
+	points << QPointF(-300.0, 100.0);
+	points << QPointF(0.0, 300.0);
+	points << QPointF(300.0, 100.0);
+	points << QPointF(200.0, -200.0);
+	points << QPointF(-200.0, -200.0);
+	QGraphicsPolygonItem polygon(points);
+	polygon.setBrush(Qt::NoBrush);
+	polygon.setPen(QPen(Qt::green));
+	polygon.setFlag(QGraphicsItem::ItemIsMovable);
+	scene.addItem(&polygon);
 
     SizeGripItem rectSizeGrip(new RectResizer, &rectItem);
     SizeGripItem ellpiseSizeGrip(new EllipseResizer, &ellipseItem);
