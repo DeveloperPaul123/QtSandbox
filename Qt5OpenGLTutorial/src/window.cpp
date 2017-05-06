@@ -2,6 +2,10 @@
 #include <QDebug>
 #include "vertex.h"
 #include <qopenglwindow.h>
+#include "input.h"
+#include <QResizeEvent>
+
+#include <GL/GL.h>
 
 // Front Verticies
 #define VERTEX_FTR Vertex( QVector3D( 0.5f,  0.5f,  0.5f), QVector3D( 1.0f, 0.0f, 0.0f ) )
@@ -50,7 +54,9 @@ static const Vertex sg_vertexes[] = {
 Window::Window(QWidget* parent)
 	:QOpenGLWidget(parent)
 {
+	// move back 5 units
 	m_transform.translate(0.0, 0.0, -5.0f);
+	setFocusPolicy(Qt::FocusPolicy::StrongFocus);
 }
 
 Window::~Window()
@@ -66,6 +72,7 @@ void Window::initializeGL()
 	printContextInformation();
 
 	// Set global information
+	// Will only draw faces that wind counter clockwise.
 	glEnable(GL_CULL_FACE);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -80,7 +87,8 @@ void Window::initializeGL()
 
 		// Cache Uniform Locations
 		u_modelToWorld = mProgram->uniformLocation("modelToWorld");
-		u_worldToView = mProgram->uniformLocation("worldToView");
+		u_worldToCamera = mProgram->uniformLocation("worldToCamera");
+		u_cameraToView = mProgram->uniformLocation("cameraToView");
 
 		// Create Buffer (Do not release until VAO is created)
 		mVertex.create();
@@ -114,11 +122,16 @@ void Window::paintGL()
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	mProgram->bind();
-	mProgram->setUniformValue(u_worldToView, m_projection);
-	mObject.bind();
-	mProgram->setUniformValue(u_modelToWorld, m_transform.toMatrix());
-	glDrawArrays(GL_TRIANGLES, 0, sizeof(sg_vertexes) / sizeof(sg_vertexes[0]));
-	mObject.release();
+	mProgram->setUniformValue(u_worldToCamera, m_camera.toMatrix());
+	mProgram->setUniformValue(u_cameraToView, m_projection);
+	{
+		mObject.bind();
+		mProgram->setUniformValue(u_modelToWorld, m_transform.toMatrix());
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glDrawArrays(GL_TRIANGLES, 0, sizeof(sg_vertexes) / sizeof(sg_vertexes[0]));
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		mObject.release();
+	}
 	mProgram->release();
 }
 
@@ -129,10 +142,83 @@ void Window::teardownGL()
 	delete mProgram;
 }
 
+void Window::keyPressEvent(QKeyEvent* event)
+{
+	if (event->isAutoRepeat())
+	{
+		event->ignore();
+	}
+	else
+	{
+		Input::registerKeyPress(event->key());
+	}
+}
+
+void Window::keyReleaseEvent(QKeyEvent* event)
+{
+	if (event->isAutoRepeat())
+	{
+		event->ignore();
+	}
+	else
+	{
+		Input::registerKeyRelease(event->key());
+	}
+}
+
+void Window::mousePressEvent(QMouseEvent* event)
+{
+	Input::registerMousePress(event->button());
+}
+
+void Window::mouseReleaseEvent(QMouseEvent* event)
+{
+	Input::registerMouseRelease(event->button());
+}
+
 void Window::update()
 {
-	// Update instance information
-	m_transform.rotate(1.0f, QVector3D(0.4f, 0.3f, 0.3f));
+	// Update input
+	Input::update();
+
+	// Camera Transformation
+	if (Input::buttonPressed(Qt::LeftButton))
+	{
+		static const auto transSpeed = 0.5f;
+		static const auto rotSpeed = 0.5f;
+
+		// Handle rotations
+		m_camera.rotate(-rotSpeed * Input::mouseDelta().x(), Camera3D::LocalUp);
+		m_camera.rotate(-rotSpeed * Input::mouseDelta().y(), m_camera.right());
+
+		// Handle translations
+		QVector3D translation;
+		if (Input::keyPressed(Qt::Key_W))
+		{
+			translation += m_camera.forward();
+		}
+		if (Input::keyPressed(Qt::Key_S))
+		{
+			translation -= m_camera.forward();
+		}
+		if (Input::keyPressed(Qt::Key_A))
+		{
+			translation -= m_camera.right();
+		}
+		if (Input::keyPressed(Qt::Key_D))
+		{
+			translation += m_camera.right();
+		}
+		if (Input::keyPressed(Qt::Key_Q))
+		{
+			translation -= m_camera.up();
+		}
+		if (Input::keyPressed(Qt::Key_E))
+		{
+			translation += m_camera.up();
+		}
+		m_camera.translate(transSpeed * translation);
+	}
 
 	// Schedule a redraw
 	QOpenGLWidget::update();
