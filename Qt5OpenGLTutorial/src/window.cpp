@@ -127,7 +127,7 @@ void Window::paintGL()
 	{
 		mObject.bind();
 		mProgram->setUniformValue(u_modelToWorld, m_transform.toMatrix());
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glDrawArrays(GL_TRIANGLES, 0, sizeof(sg_vertexes) / sizeof(sg_vertexes[0]));
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		mObject.release();
@@ -176,6 +176,19 @@ void Window::mouseReleaseEvent(QMouseEvent* event)
 	Input::registerMouseRelease(event->button());
 }
 
+void Window::wheelEvent(QWheelEvent* event)
+{
+	QPoint num_degrees = event->angleDelta() / 8;
+
+	if (!num_degrees.isNull())
+	{
+		auto steps = num_degrees / 15;
+		m_camera.translate(0.5f * static_cast<float>(steps.y()) * m_camera.forward());
+		update();
+	}
+}
+
+
 void Window::update()
 {
 	// Update input
@@ -188,8 +201,15 @@ void Window::update()
 		static const auto rotSpeed = 0.5f;
 
 		// Handle rotations
-		m_camera.rotate(-rotSpeed * Input::mouseDelta().x(), Camera3D::LocalUp);
-		m_camera.rotate(-rotSpeed * Input::mouseDelta().y(), m_camera.right());
+		// This version of interaction rotates the model (and world) about the camera axes, 
+		// resulting in a CAD style interaction, not a fly through camera. 
+		// for a fly through camera you would do the following:
+		// m_camera.rotate(-rotSpeed * Input::mouseDelta().x(), Camera3D::LocalUp);
+		// m_camera.rotate(-rotSpeed * Input::mouseDelta().y(), m_camera.right());
+		// What would be interesting is to see if I can create the same effect of a CAD camera by properly 
+		// moving the camera instead of the model.
+		m_transform.rotate(rotSpeed * Input::mouseDelta().x(), Camera3D::LocalUp);
+		m_transform.rotate(rotSpeed * Input::mouseDelta().y(), m_camera.right());
 
 		// Handle translations
 		QVector3D translation;
@@ -218,6 +238,12 @@ void Window::update()
 			translation += m_camera.up();
 		}
 		m_camera.translate(transSpeed * translation);
+	}
+	else if (Input::buttonPressed(Qt::RightButton))
+	{
+		//TODO: Add translation using right mouse button (or wheel button)
+//		auto current_trans = m_camera.translation();
+//		m_camera.translate(current_trans.x() - Input::mouseDelta().x()*0.01f, current_trans.y() - Input::mouseDelta().y()*0.01f, current_trans.z());
 	}
 
 	// Schedule a redraw
